@@ -424,23 +424,12 @@ def get_ordered_amount(args):
 	return data[0][0] if data else 0
 
 
-<<<<<<< HEAD
 def get_other_condition(args, for_doc):
-	condition = "expense_account = '%s'" % (args.expense_account)
+	condition = f"expense_account = {frappe.db.escape(args.expense_account)}"
 	budget_against_field = args.get("budget_against_field")
 
 	if budget_against_field and args.get(budget_against_field):
-		condition += f" and child.{budget_against_field} = '{args.get(budget_against_field)}'"
-=======
-def get_other_condition(params, for_doc):
-	condition = f"expense_account = {frappe.db.escape(params.expense_account)}"
-	budget_against_field = params.get("budget_against_field")
-
-	if budget_against_field and params.get(budget_against_field):
-		condition += (
-			f" and child.{budget_against_field} = {frappe.db.escape(params.get(budget_against_field))}"
-		)
->>>>>>> b72cde73ba (fix: Add likely missing escaps (#55574))
+		condition += f" and child.{budget_against_field} = {frappe.db.escape(args.get(budget_against_field))}"
 
 	if args.get("fiscal_year"):
 		date_field = "schedule_date" if for_doc == "Material Request" else "transaction_date"
@@ -448,15 +437,10 @@ def get_other_condition(params, for_doc):
 			"Fiscal Year", args.get("fiscal_year"), ["year_start_date", "year_end_date"]
 		)
 
-<<<<<<< HEAD
-		condition += f""" and parent.{date_field}
-			between '{start_date}' and '{end_date}' """
-=======
-	start_date = frappe.get_cached_value("Fiscal Year", params.from_fiscal_year, "year_start_date")
-	end_date = frappe.get_cached_value("Fiscal Year", params.to_fiscal_year, "year_end_date")
+	start_date = frappe.get_cached_value("Fiscal Year", args.from_fiscal_year, "year_start_date")
+	end_date = frappe.get_cached_value("Fiscal Year", args.to_fiscal_year, "year_end_date")
 
 	condition += f" and parent.{date_field} between {frappe.db.escape(str(start_date))} and {frappe.db.escape(str(end_date))}"
->>>>>>> b72cde73ba (fix: Add likely missing escaps (#55574))
 
 	return condition
 
