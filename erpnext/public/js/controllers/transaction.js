@@ -10,6 +10,11 @@ erpnext.TransactionController = class TransactionController extends erpnext.taxe
 		this.set_fields_onload_for_line_item();
 		this.frm.ignore_doctypes_on_cancel_all = ["Serial and Batch Bundle"];
 
+		// Company-wise master filtering: customer link
+		if (this.frm.fields_dict["customer"]) {
+			this.frm.set_query("customer", () => erpnext.queries.customer(me.frm.doc));
+		}
+
 		frappe.flags.hide_serial_batch_dialog = true;
 		frappe.ui.form.on(this.frm.doctype + " Item", "rate", function (frm, cdt, cdn) {
 			var item = frappe.get_doc(cdt, cdn);

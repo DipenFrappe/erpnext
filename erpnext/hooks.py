@@ -22,6 +22,18 @@ add_to_apps_screen = [
 
 develop_version = "17.x.x-develop"
 
+permission_query_conditions = {
+	"Supplier": "erpnext.controllers.party_permissions.supplier_query_conditions",
+	"Customer": "erpnext.controllers.party_permissions.customer_query_conditions",
+	"Item": "erpnext.controllers.party_permissions.item_query_conditions",
+}
+
+has_permission = {
+	"Supplier": "erpnext.controllers.party_permissions.party_has_permission",
+	"Customer": "erpnext.controllers.party_permissions.party_has_permission",
+	"Item": "erpnext.controllers.party_permissions.party_has_permission",
+}
+
 app_include_js = "erpnext.bundle.js"
 app_include_css = "erpnext.bundle.css"
 web_include_css = "erpnext-web.bundle.css"
@@ -348,12 +360,60 @@ pre_submit_validation_doctypes = [
 	"Sales Order",
 ]
 
+# Hook: other apps can extend this list to add their own doctypes.
+# Each entry is a dict with keys:
+#   doctype          (required)  — DocType name
+#   customer_field   (optional)  — Link field pointing to Customer at doc level
+#   supplier_field   (optional)  — Link field pointing to Supplier at doc level
+#   party_field      (optional)  — Generic party Link field (Customer or Supplier)
+#   party_type_field (optional)  — Companion field holding the party type string
+#   party_rows_table (optional)  — Child table containing party/party_type per row
+#   items_table      (optional)  — Child table with an item_code field
+#   item_field       (optional)  — Field name inside items_table (default: "item_code")
+company_wise_masters_config = [
+	# Sales
+	{"doctype": "Sales Order", "customer_field": "customer", "items_table": "items"},
+	{"doctype": "Delivery Note", "customer_field": "customer", "items_table": "items"},
+	{"doctype": "Sales Invoice", "customer_field": "customer", "items_table": "items"},
+	{"doctype": "POS Invoice", "customer_field": "customer", "items_table": "items"},
+	# Quotation uses party_name/quotation_to — customer or lead
+	{
+		"doctype": "Quotation",
+		"party_field": "party_name",
+		"party_type_field": "quotation_to",
+		"items_table": "items",
+	},
+	# Buying
+	{"doctype": "Purchase Order", "supplier_field": "supplier", "items_table": "items"},
+	{"doctype": "Purchase Receipt", "supplier_field": "supplier", "items_table": "items"},
+	{"doctype": "Purchase Invoice", "supplier_field": "supplier", "items_table": "items"},
+	{"doctype": "Subcontracting Order", "supplier_field": "supplier", "items_table": "items"},
+	{"doctype": "Subcontracting Receipt", "supplier_field": "supplier", "items_table": "items"},
+	# Stock — items only, no party at doc level
+	{"doctype": "Stock Entry", "items_table": "items"},
+	{"doctype": "Stock Reconciliation", "items_table": "items"},
+	{"doctype": "Material Request", "items_table": "items"},
+	# Finance — dynamic party_type/party
+	{"doctype": "Payment Entry", "party_field": "party", "party_type_field": "party_type"},
+	{
+		"doctype": "Journal Entry",
+		"party_rows_table": "accounts",
+		"party_field": "party",
+		"party_type_field": "party_type",
+	},
+]
+
+_party_company_doctypes = tuple(entry["doctype"] for entry in company_wise_masters_config)
+
 doc_events = {
 	"*": {
 		"validate": [
 			"erpnext.support.doctype.service_level_agreement.service_level_agreement.apply",
 			"erpnext.setup.doctype.transaction_deletion_record.transaction_deletion_record.check_for_running_deletion_job",
 		],
+	},
+	tuple(_party_company_doctypes): {
+		"validate": "erpnext.controllers.party_permissions.validate_party_company",
 	},
 	tuple(period_closing_doctypes): {
 		"validate": "erpnext.accounts.doctype.accounting_period.accounting_period.validate_accounting_period_on_doc_save",
